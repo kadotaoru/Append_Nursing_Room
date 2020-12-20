@@ -3,12 +3,18 @@ package to.msn.wings.appendnursingroom
 import android.Manifest
 import android.content.pm.PackageManager
 import android.location.Location
-import android.os.Build
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.view.WindowManager
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import com.android.volley.Request
+import com.android.volley.RequestQueue
+import com.android.volley.Response
+import com.android.volley.VolleyError
+import com.android.volley.toolbox.JsonObjectRequest
+import com.android.volley.toolbox.Volley
 import com.google.android.gms.location.*
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -16,15 +22,22 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.android.synthetic.main.activity_main.*
+import org.json.JSONException
+import org.json.JSONObject
+import java.util.*
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var mMap: GoogleMap
     private val MY_PERMISSION_REQUEST_ACCESS_FINE_LOCATION = 1
+    private var spots: ArrayList<Spot>? = null
+    private val spot: Spot? = null
 
     private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
     private lateinit var lastLocation: Location
     private var locationCallback : LocationCallback? = null  //いい情報が更新されたら、更新内容を受け取る
+    var url = "http://babymap-api.mamaro.jp/api/places/search?lat=35.451152&lon=139.638741"
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,6 +48,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
+
+        jsonParse()
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
@@ -112,7 +127,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     }
                 }
             }
-            fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, null)
+            fusedLocationProviderClient.requestLocationUpdates(
+                locationRequest,
+                locationCallback,
+                null
+            )
         }
     }
 
@@ -126,5 +145,40 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         if(locationCallback != null){
             fusedLocationProviderClient.removeLocationUpdates(locationCallback)
         }
+    }
+
+    //JsonをParse
+    private fun jsonParse() {
+        val queue: RequestQueue = Volley.newRequestQueue(this)
+        val request =
+            JsonObjectRequest(
+                Request.Method.GET, url,
+                null, object : Response.Listener<JSONObject?> {
+                    @JvmName("onResponse1")//????
+                    fun onResponse(response: JSONObject) {
+                        try {
+                            spots = ArrayList<Spot>()
+                            val placesArray = response.getJSONArray("places")
+                            for (i in 0 until placesArray.length()) {
+                                val places = placesArray.getJSONObject(i).getJSONObject("Place")
+                                val lat = places.getString("lat")
+                                val lon = places.getString("lon")
+                                Log.d("緯度：$lat", "経度：$lon")
+                            }
+                        } catch (e: JSONException) {
+                            e.printStackTrace()
+                        }
+                    }
+
+                    override fun onResponse(response: JSONObject?) {
+                        TODO("Not yet implemented")
+                    }
+
+                }, object : Response.ErrorListener {
+                    override fun onErrorResponse(error: VolleyError) {
+                        error.printStackTrace()
+                    }
+                })
+        queue.add(request)
     }
 }
