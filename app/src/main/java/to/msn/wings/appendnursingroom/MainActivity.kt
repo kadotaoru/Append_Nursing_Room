@@ -10,9 +10,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.android.volley.Request
-import com.android.volley.RequestQueue
-import com.android.volley.Response
-import com.android.volley.VolleyError
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
 import com.google.android.gms.location.*
@@ -20,10 +17,12 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
+import com.google.android.gms.maps.model.MarkerOptions
 import kotlinx.android.synthetic.main.activity_main.*
 import org.json.JSONException
-import org.json.JSONObject
 import java.util.*
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
@@ -32,11 +31,20 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private val MY_PERMISSION_REQUEST_ACCESS_FINE_LOCATION = 1
     private var spots: ArrayList<Spot>? = null
     private val spot: Spot? = null
+    private lateinit var marker: Marker
 
     private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
     private lateinit var lastLocation: Location
     private var locationCallback : LocationCallback? = null  //いい情報が更新されたら、更新内容を受け取る
     var url = "http://babymap-api.mamaro.jp/api/places/search?lat=35.451152&lon=139.638741"
+
+    private val PERTH = LatLng(-31.952854, 115.857342)
+    private val SYDNEY = LatLng(-33.87365, 151.20689)
+    private val BRISBANE = LatLng(-27.47093, 153.0235)
+
+    private var mPerth: Marker? = null
+    private var mSydney: Marker? = null
+    private var mBrisbane: Marker? = null
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,6 +65,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         mMap = googleMap
 
         checkPermission()
+
     }
 
     //
@@ -113,8 +122,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         ) {
             mMap.isMyLocationEnabled = true
             val locationRequest = LocationRequest().apply {
-                interval = 10000
-                fastestInterval = 5000
+//                interval = 10000
+//                fastestInterval = 5000
                 priority = LocationRequest.PRIORITY_HIGH_ACCURACY
             }
             locationCallback = object : LocationCallback(){
@@ -147,38 +156,31 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    //JsonをParse
     private fun jsonParse() {
-        val queue: RequestQueue = Volley.newRequestQueue(this)
-        val request =
-            JsonObjectRequest(
-                Request.Method.GET, url,
-                null, object : Response.Listener<JSONObject?> {
-                    @JvmName("onResponse1")//????
-                    fun onResponse(response: JSONObject) {
-                        try {
-                            spots = ArrayList<Spot>()
-                            val placesArray = response.getJSONArray("places")
-                            for (i in 0 until placesArray.length()) {
-                                val places = placesArray.getJSONObject(i).getJSONObject("Place")
-                                val lat = places.getString("lat")
-                                val lon = places.getString("lon")
-                                Log.d("緯度：$lat", "経度：$lon")
-                            }
-                        } catch (e: JSONException) {
-                            e.printStackTrace()
-                        }
-                    }
+        val queue = Volley.newRequestQueue(this)
+        val request = JsonObjectRequest(
+            Request.Method.GET, url, null,
+            { response ->
+                try {
+                    spots = ArrayList()
+                    val placesArray = response.getJSONArray("places")
+                    for (i in 0 until placesArray.length()) {
+                        val places = placesArray.getJSONObject(i).getJSONObject("Place")
+                        val lat = places.getDouble("lat")
+                        val lon = places.getDouble("lon")
+                        Log.d("緯度：$lat", "経度：$lon")
 
-                    override fun onResponse(response: JSONObject?) {
-                        TODO("Not yet implemented")
+                        //マーカーをつける
+                        mMap.addMarker(
+                            MarkerOptions()
+                                .position(LatLng(lat, lon))
+                                .title("Nursing room")
+                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)))
                     }
-
-                }, object : Response.ErrorListener {
-                    override fun onErrorResponse(error: VolleyError) {
-                        error.printStackTrace()
-                    }
-                })
+                } catch (e: JSONException) {
+                    e.printStackTrace()
+                }
+            }) { error -> error.printStackTrace() }
         queue.add(request)
     }
 }

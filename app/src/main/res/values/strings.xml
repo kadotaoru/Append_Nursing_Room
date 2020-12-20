@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">Append Nursing Room</string>
-    <string name="serch">serch</string>
+    <string name="app_name">Search Nursing Room</string>
+    <string name="serch">search</string>
 </resources>
