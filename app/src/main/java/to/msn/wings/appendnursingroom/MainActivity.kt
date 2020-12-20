@@ -175,7 +175,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                             MarkerOptions()
                                 .position(LatLng(lat, lon))
                                 .title("Nursing room")
-                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)))
+                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN))
+                                .anchor(0.5F, 0.5F))
                     }
                 } catch (e: JSONException) {
                     e.printStackTrace()
